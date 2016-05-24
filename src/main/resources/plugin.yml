@@ -1,0 +1,5 @@
+name: CSGO-CratesPlus
+description: CSGO Opener for CratesPlus
+main: plus.crates.csgo.CSGO
+version: ${project.version}
+depend: [CratesPlus]
