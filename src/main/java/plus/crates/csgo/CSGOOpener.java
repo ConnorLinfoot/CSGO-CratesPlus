@@ -123,7 +123,7 @@ public class CSGOOpener extends Opener {
 					i++;
 				}
 				if (timer == maxTimeTicks) {
-					cratesPlus.getCrateHandler().removeOpening(player.getUniqueId());
+					finish();
 					task.cancel();
 					return;
 				}
