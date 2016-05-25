@@ -43,13 +43,17 @@ public class CSGOOpener extends Opener {
 	}
 
 	@Override
-	public void doTask() {
+	public void doReopen() {
+		getPlayer().openInventory(winGUI);
+	}
+
+	@Override
+	protected void doOpen() {
 		Random random = new Random();
 		int max = crate.getWinnings().size() - 1;
 		int min = 0;
 		currentItem = random.nextInt((max - min) + 1) + min;
 		winGUI = Bukkit.createInventory(null, 45, crate.getColor() + crate.getName() + " Win");
-		cratesPlus.getCrateHandler().addOpening(player.getUniqueId(), winGUI);
 		player.openInventory(winGUI);
 		int maxTime = getOpenerConfig().getInt("Length");
 		final int maxTimeTicks = maxTime * 10;
