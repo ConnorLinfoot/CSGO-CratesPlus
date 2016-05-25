@@ -4,6 +4,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.Sound;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -13,6 +14,7 @@ import plus.crates.CratesPlus;
 import plus.crates.Opener.Opener;
 import plus.crates.Winning;
 
+import java.io.IOException;
 import java.util.Random;
 
 public class CSGOOpener extends Opener {
@@ -28,6 +30,19 @@ public class CSGOOpener extends Opener {
 	}
 
 	@Override
+	public void doSetup() {
+		FileConfiguration config = getOpenerConfig();
+		if (!config.isSet("Length")) {
+			config.set("Length", 10);
+			try {
+				config.save(getOpenerConfigFile());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	@Override
 	public void doTask() {
 		Random random = new Random();
 		int max = crate.getWinnings().size() - 1;
@@ -36,7 +51,7 @@ public class CSGOOpener extends Opener {
 		winGUI = Bukkit.createInventory(null, 45, crate.getColor() + crate.getName() + " Win");
 		cratesPlus.getCrateHandler().addOpening(player.getUniqueId(), winGUI);
 		player.openInventory(winGUI);
-		int maxTime = cratesPlus.getConfigHandler().getCrateGUITime();
+		int maxTime = getOpenerConfig().getInt("Length");
 		final int maxTimeTicks = maxTime * 10;
 		task = Bukkit.getScheduler().runTaskTimerAsynchronously(cratesPlus, new Runnable() {
 			public void run() {
@@ -47,7 +62,7 @@ public class CSGOOpener extends Opener {
 				Integer i = 0;
 				while (i < 45) {
 
-					if( i >= 18 && i <= 26 && i != 22 ) {
+					if (i >= 18 && i <= 26 && i != 22) {
 						// TODO handle csgo "Row"
 //						winGUI.setItem(i, getWinning().getPreviewItemStack());
 						i++;
