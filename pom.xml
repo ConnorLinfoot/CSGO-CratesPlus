@@ -66,9 +66,9 @@
         <dependency>
             <groupId>com.connorlinfoot</groupId>
             <artifactId>CratesPlus</artifactId>
-            <version>4.1.0-SNAPSHOT-4</version>
+            <version>4.1.0-SNAPSHOT-5</version>
             <scope>system</scope>
-            <systemPath>${basedir}/lib/CratesPlus-4.1.0-SNAPSHOT-4.jar</systemPath>
+            <systemPath>${basedir}/lib/CratesPlus-4.1.0-SNAPSHOT-5.jar</systemPath>
         </dependency>
     </dependencies>
 
