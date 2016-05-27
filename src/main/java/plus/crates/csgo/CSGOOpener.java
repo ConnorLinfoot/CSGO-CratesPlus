@@ -50,7 +50,7 @@ public class CSGOOpener extends Opener {
 	public void doOpen(final Player player, final Crate crate, Location blockLocation) {
 		final Inventory winGUI;
 		final Integer[] timer = {0};
-		winGUI = Bukkit.createInventory(null, 45, crate.getColor() + crate.getName() + " Win");
+		winGUI = Bukkit.createInventory(null, 27, crate.getColor() + crate.getName() + " Win");
 		guis.put(player.getUniqueId(), winGUI);
 		player.openInventory(winGUI);
 		final int maxTimeTicks = length * 10;
@@ -62,9 +62,9 @@ public class CSGOOpener extends Opener {
 					return;
 				}
 				Integer i = 0;
-				while (i < 45) {
+				while (i < 27) {
 
-					if (i == 13 || i == 31) {
+					if (i == 4 || i == 22) {
 						ItemStack torch = new ItemStack(Material.REDSTONE_TORCH_ON);
 						ItemMeta itemMeta = torch.getItemMeta();
 						itemMeta.setDisplayName(ChatColor.GREEN + " ");
@@ -74,11 +74,10 @@ public class CSGOOpener extends Opener {
 						continue;
 					}
 
-//					if (i >= 19 && i <= 25) {
 					Winning winning;
-					if (i >= 19 && i <= 25) {
+					if (i >= 10 && i <= 16) {
 
-						if (i == 25) {
+						if (i == 16) {
 							Winning winning1 = getWinning(crate);
 							if (last5Winnings.size() == 3)
 								last5Winnings.remove(0);
@@ -88,7 +87,7 @@ public class CSGOOpener extends Opener {
 							winGUI.setItem(i, winGUI.getItem(i + 1));
 						}
 
-						if (i == 22) {
+						if (i == 13) {
 
 							if (timer[0] == maxTimeTicks) {
 								winning = last5Winnings.get(0);
