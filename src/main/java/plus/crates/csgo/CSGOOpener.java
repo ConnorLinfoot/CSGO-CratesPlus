@@ -8,13 +8,12 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.scheduler.BukkitTask;
 import plus.crates.Crate;
-import plus.crates.CratesPlus;
 import plus.crates.Opener.Opener;
 import plus.crates.Winning;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
 import java.util.UUID;
@@ -48,19 +47,14 @@ public class CSGOOpener extends Opener {
 	}
 
 	@Override
-	protected void doOpen(final Player player, final Crate crate, Location blockLocation) {
+	public void doOpen(final Player player, final Crate crate, Location blockLocation) {
 		final Inventory winGUI;
 		final Integer[] timer = {0};
-		final Integer[] currentItem = new Integer[1];
-
-		Random random = new Random();
-		int max = crate.getWinnings().size() - 1;
-		int min = 0;
-		currentItem[0] = random.nextInt((max - min) + 1) + min;
 		winGUI = Bukkit.createInventory(null, 45, crate.getColor() + crate.getName() + " Win");
 		guis.put(player.getUniqueId(), winGUI);
 		player.openInventory(winGUI);
 		final int maxTimeTicks = length * 10;
+		final ArrayList<Winning> last5Winnings = new ArrayList<>();
 		tasks.put(player.getUniqueId(), Bukkit.getScheduler().runTaskTimerAsynchronously(getPlugin(), new BukkitRunnable() {
 			public void run() {
 				if (!player.isOnline()) { // TODO, Try and handle DC for players?
@@ -70,31 +64,40 @@ public class CSGOOpener extends Opener {
 				Integer i = 0;
 				while (i < 45) {
 
-					if (i >= 18 && i <= 26 && i != 22) {
-						// TODO handle csgo "Row"
-//						winGUI.setItem(i, getWinning().getPreviewItemStack());
+					if (i == 13 || i == 31) {
+						ItemStack torch = new ItemStack(Material.REDSTONE_TORCH_ON);
+						ItemMeta itemMeta = torch.getItemMeta();
+						itemMeta.setDisplayName(ChatColor.GREEN + " ");
+						torch.setItemMeta(itemMeta);
+						winGUI.setItem(i, torch);
 						i++;
 						continue;
 					}
 
-					if (i == 22) {
+//					if (i >= 19 && i <= 25) {
+					Winning winning;
+					if (i >= 19 && i <= 25) {
+
+						if (i == 25) {
+							Winning winning1 = getWinning(crate);
+							if (last5Winnings.size() == 3)
+								last5Winnings.remove(0);
+							last5Winnings.add(winning1);
+							winGUI.setItem(i, winning1.getPreviewItemStack());
+						} else if (winGUI.getItem(i + 1) != null) {
+							winGUI.setItem(i, winGUI.getItem(i + 1));
+						}
+
+						if (i == 22) {
+
+							if (timer[0] == maxTimeTicks) {
+								winning = last5Winnings.get(0);
+								winning.runWin(player);
+							}
+
+						}
+
 						i++;
-						if (crate.getWinnings().size() == currentItem[0])
-							currentItem[0] = 0;
-						final Winning winning;
-						if (timer[0] == maxTimeTicks) {
-							winning = getWinning(crate);
-						} else {
-							winning = crate.getWinnings().get(currentItem[0]);
-						}
-
-						final ItemStack currentItemStack = winning.getPreviewItemStack();
-						if (timer[0] == maxTimeTicks) {
-							winning.runWin(player);
-						}
-						winGUI.setItem(22, currentItemStack);
-
-						currentItem[0]++;
 						continue;
 					}
 					ItemStack itemStack = new ItemStack(Material.STAINED_GLASS_PANE, 1, (short) new Random().nextInt(15));
