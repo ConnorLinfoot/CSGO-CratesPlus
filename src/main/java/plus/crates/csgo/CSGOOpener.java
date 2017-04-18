@@ -8,9 +8,10 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
-import plus.crates.Crate;
+import plus.crates.Crates.Crate;
+import plus.crates.Crates.KeyCrate;
+import plus.crates.Crates.Winning;
 import plus.crates.Opener.Opener;
-import plus.crates.Winning;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -54,11 +55,19 @@ public class CSGOOpener extends Opener {
 		guis.put(player.getUniqueId(), winGUI);
 		player.openInventory(winGUI);
 		final int maxTimeTicks = length * 10;
+		final int slowSpeedTime = maxTimeTicks / 20;
+		final int fastSpeedTime = (maxTimeTicks / 10) * 9;
 		final ArrayList<Winning> last5Winnings = new ArrayList<>();
 		tasks.put(player.getUniqueId(), Bukkit.getScheduler().runTaskTimerAsynchronously(getPlugin(), new BukkitRunnable() {
 			public void run() {
-				if (!player.isOnline()) { // TODO, Try and handle DC for players?
+				if (!player.isOnline()) {
+					finish(player);
+					Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "crate key " + player.getName() + " " + crate.getName() + " 1");
 					Bukkit.getScheduler().cancelTask(tasks.get(player.getUniqueId()));
+					return;
+				}
+				if ((timer[0] > fastSpeedTime || timer[0] < slowSpeedTime) && (timer[0] & 1) == 0) {
+					timer[0]++;
 					return;
 				}
 				Integer i = 0;
@@ -89,7 +98,7 @@ public class CSGOOpener extends Opener {
 
 						if (i == 13) {
 
-							if (timer[0] == maxTimeTicks) {
+							if (timer[0] >= maxTimeTicks) {
 								winning = last5Winnings.get(0);
 								winning.runWin(player);
 							}
@@ -101,7 +110,7 @@ public class CSGOOpener extends Opener {
 					}
 					ItemStack itemStack = new ItemStack(Material.STAINED_GLASS_PANE, 1, (short) new Random().nextInt(15));
 					ItemMeta itemMeta = itemStack.getItemMeta();
-					if (timer[0] == maxTimeTicks) {
+					if (timer[0] >= maxTimeTicks) {
 						itemMeta.setDisplayName(ChatColor.RESET + "Winner!");
 					} else {
 						Sound sound;
@@ -128,7 +137,7 @@ public class CSGOOpener extends Opener {
 					winGUI.setItem(i, itemStack);
 					i++;
 				}
-				if (timer[0] == maxTimeTicks) {
+				if (timer[0] >= maxTimeTicks) {
 					finish(player);
 					Bukkit.getScheduler().cancelTask(tasks.get(player.getUniqueId()));
 					return;
@@ -138,5 +147,9 @@ public class CSGOOpener extends Opener {
 		}, 0L, 2L).getTaskId());
 	}
 
+	@Override
+	public boolean doesSupport(Crate crate) {
+		return crate instanceof KeyCrate;
+	}
 
 }
