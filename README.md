@@ -1,1 +1,1 @@
-This is a early version of the CSGO opener for CratesPlus 4.1+
+This is an opener for CratesPlus v5+

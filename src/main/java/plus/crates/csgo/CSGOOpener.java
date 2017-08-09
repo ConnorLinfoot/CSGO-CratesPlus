@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.util.*;
 
 public class CSGOOpener extends Opener {
-    //    private HashMap<UUID, Integer> tasks = new HashMap<>();
     private HashMap<UUID, Inventory> guis = new HashMap<>();
     private int length = 10 * 10;
     private int slowSpeedTime;
@@ -117,7 +116,6 @@ public class CSGOOpener extends Opener {
                     this.cancel();
                     return;
                 }
-
 
                 if ((iTracker[0] > fastSpeedTime || iTracker[0] < slowSpeedTime) && (iTracker[0] & 1) == 0) {
                     iTracker[0]++;
