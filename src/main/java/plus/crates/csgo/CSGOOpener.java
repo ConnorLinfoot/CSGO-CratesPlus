@@ -1,6 +1,9 @@
 package plus.crates.csgo;
 
-import org.bukkit.*;
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -14,142 +17,153 @@ import plus.crates.Crates.Winning;
 import plus.crates.Opener.Opener;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 
 public class CSGOOpener extends Opener {
-	private HashMap<UUID, Integer> tasks = new HashMap<>();
-	private HashMap<UUID, Inventory> guis = new HashMap<>();
-	private int length = 10;
+    //    private HashMap<UUID, Integer> tasks = new HashMap<>();
+    private HashMap<UUID, Inventory> guis = new HashMap<>();
+    private int length = 10 * 10;
+    private int slowSpeedTime;
+    private int fastSpeedTime;
+    private ItemStack redstoneTorchOff;
+    private ItemStack redstoneTorchOn;
 
-	public CSGOOpener(Plugin plugin, String name) {
-		super(plugin, name);
-	}
+    public CSGOOpener(Plugin plugin, String name) {
+        super(plugin, name);
+    }
 
-	@Override
-	public void doSetup() {
-		FileConfiguration config = getOpenerConfig();
-		if (!config.isSet("Length")) {
-			config.set("Length", 10);
-			try {
-				config.save(getOpenerConfigFile());
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-		length = config.getInt("Length");
-	}
+    @Override
+    public void doSetup() {
+        FileConfiguration config = getOpenerConfig();
+        if (!config.isSet("Length")) {
+            config.set("Length", 10);
+            try {
+                config.save(getOpenerConfigFile());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        length = config.getInt("Length") * 10; // Convert to "half ticks"
+        slowSpeedTime = length / 20;
+        fastSpeedTime = (length / 10) * 9;
+        redstoneTorchOff = new ItemStack(Material.REDSTONE_TORCH_OFF);
+        redstoneTorchOn = new ItemStack(Material.REDSTONE_TORCH_ON);
+        ItemMeta torchMeta = redstoneTorchOff.getItemMeta();
+        torchMeta.setDisplayName(ChatColor.RESET + " ");
+        redstoneTorchOff.setItemMeta(torchMeta);
+        redstoneTorchOn.setItemMeta(torchMeta);
+    }
 
-	@Override
-	public void doReopen(Player player, Crate crate, Location blockLocation) {
-		player.openInventory(guis.get(player.getUniqueId()));
-	}
+    @Override
+    public void doReopen(Player player, Crate crate, Location blockLocation) {
+        player.openInventory(guis.get(player.getUniqueId()));
+    }
 
-	@Override
-	public void doOpen(final Player player, final Crate crate, Location blockLocation) {
-		final Inventory winGUI;
-		final Integer[] timer = {0};
-		winGUI = Bukkit.createInventory(null, 27, crate.getColor() + crate.getName() + " Win");
-		guis.put(player.getUniqueId(), winGUI);
-		player.openInventory(winGUI);
-		final int maxTimeTicks = length * 10;
-		final int slowSpeedTime = maxTimeTicks / 20;
-		final int fastSpeedTime = (maxTimeTicks / 10) * 9;
-		final ArrayList<Winning> last5Winnings = new ArrayList<>();
-		tasks.put(player.getUniqueId(), Bukkit.getScheduler().runTaskTimerAsynchronously(getPlugin(), new BukkitRunnable() {
-			public void run() {
-				if (!player.isOnline()) {
-					finish(player);
-					Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "crate key " + player.getName() + " " + crate.getName() + " 1");
-					Bukkit.getScheduler().cancelTask(tasks.get(player.getUniqueId()));
-					return;
-				}
-				if ((timer[0] > fastSpeedTime || timer[0] < slowSpeedTime) && (timer[0] & 1) == 0) {
-					timer[0]++;
-					return;
-				}
-				Integer i = 0;
-				while (i < 27) {
+    private ArrayList<ItemStack> calculateItems(ArrayList<Winning> winnings, int current) {
+        ArrayList<ItemStack> items = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            int winningsI = 0;
 
-					if (i == 4 || i == 22) {
-						ItemStack torch = new ItemStack(Material.REDSTONE_TORCH_ON);
-						ItemMeta itemMeta = torch.getItemMeta();
-						itemMeta.setDisplayName(ChatColor.GREEN + " ");
-						torch.setItemMeta(itemMeta);
-						winGUI.setItem(i, torch);
-						i++;
-						continue;
-					}
+            switch (i) {
+                case 0:
+                    winningsI = current - 2;
+                    break;
+                case 1:
+                    winningsI = current - 1;
+                    break;
+                case 3:
+                    winningsI = current + 1;
+                    break;
+                case 4:
+                    winningsI = current + 2;
+                    break;
+            }
 
-					Winning winning;
-					if (i >= 10 && i <= 16) {
+            if (i == 2) {
+                items.add(winnings.get(current).getPreviewItemStack());
+            } else {
+                if (winningsI < 0) {
+                    // winningsI = -2
+                    winningsI = winnings.size() - Math.abs(winningsI);
+                } else if (winningsI > winnings.size() - 1) {
+                    winningsI = winnings.size() + winningsI;
+                }
+                items.add(winnings.get(winningsI).getPreviewItemStack());
+            }
+        }
+        return items;
+    }
 
-						if (i == 16) {
-							winning = crate.getRandomWinning();
-							if (last5Winnings.size() == 3)
-								last5Winnings.remove(0);
-							last5Winnings.add(winning);
-							winGUI.setItem(i, winning.getPreviewItemStack());
-						} else if (winGUI.getItem(i + 1) != null) {
-							winGUI.setItem(i, winGUI.getItem(i + 1));
-						}
+    @Override
+    public void doOpen(final Player player, final Crate crate, Location blockLocation) {
+        final ArrayList<Winning> winnings = crate.getWinningsExcludeAlways();
+        if (winnings.size() < 5) {
+            // TODO Handle when they have less than 5 winnings
+            return;
+        }
+        Collections.shuffle(winnings);
+        final Inventory gui = Bukkit.createInventory(null, 27, crate.getName(true));
+        final Integer[] iTracker = {0, 0}; // 0 = current tick (10), 1 = current winning
+        player.openInventory(gui);
+        guis.put(player.getUniqueId(), gui);
 
-						if (i == 13) {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (!player.isOnline()) {
+                    // Player is not online, cancel task and run key command to return the key
+                    finish(player);
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "crate key " + player.getName() + " " + crate.getName() + " 1");
+                    this.cancel();
+                    return;
+                }
 
-							if (timer[0] >= maxTimeTicks) {
-								winning = last5Winnings.get(0);
-								crate.handleWin(player, winning);
-							}
 
-						}
+                if ((iTracker[0] > fastSpeedTime || iTracker[0] < slowSpeedTime) && (iTracker[0] & 1) == 0) {
+                    iTracker[0]++;
+                    return;
+                }
 
-						i++;
-						continue;
-					}
-					ItemStack itemStack = new ItemStack(Material.STAINED_GLASS_PANE, 1, (short) new Random().nextInt(15));
-					ItemMeta itemMeta = itemStack.getItemMeta();
-					if (timer[0] >= maxTimeTicks) {
-						itemMeta.setDisplayName(ChatColor.RESET + "Winner!");
-					} else {
-						Sound sound;
-						try {
-							sound = Sound.valueOf("NOTE_PIANO");
-						} catch (Exception e) {
-							try {
-								sound = Sound.valueOf("BLOCK_NOTE_HARP");
-							} catch (Exception ee) {
-								return; // This should never happen!
-							}
-						}
-						final Sound finalSound = sound;
-						Bukkit.getScheduler().runTask(getPlugin(), new Runnable() {
-							@Override
-							public void run() {
-								if (player.getOpenInventory().getTitle() != null && player.getOpenInventory().getTitle().contains(" Win"))
-									player.playSound(player.getLocation(), finalSound, (float) 0.2, 2);
-							}
-						});
-						itemMeta.setDisplayName(ChatColor.RESET + "Rolling...");
-					}
-					itemStack.setItemMeta(itemMeta);
-					winGUI.setItem(i, itemStack);
-					i++;
-				}
-				if (timer[0] >= maxTimeTicks) {
-					finish(player);
-					Bukkit.getScheduler().cancelTask(tasks.get(player.getUniqueId()));
-					return;
-				}
-				timer[0]++;
-			}
-		}, 0L, 2L).getTaskId());
-	}
+                ArrayList<ItemStack> items = calculateItems(winnings, iTracker[1]);
 
-	@Override
-	public boolean doesSupport(Crate crate) {
-		return crate instanceof KeyCrate;
-	}
+                for (int i = 0; i < 27; i++) {
+                    if (i == 4 || i == 22) {
+                        gui.setItem(i, iTracker[0] == length ? redstoneTorchOn : redstoneTorchOff);
+                    } else if (i >= 10 && i <= 16) {
+                        gui.setItem(i, items.get(i - 10));
+                    } else {
+                        ItemStack itemStack = new ItemStack(Material.STAINED_GLASS_PANE, 1, (short) new Random().nextInt(15));
+                        ItemMeta itemMeta = itemStack.getItemMeta();
+                        itemMeta.setDisplayName(ChatColor.RESET + " ");
+                        itemStack.setItemMeta(itemMeta);
+                        gui.setItem(i, itemStack);
+                    }
+                }
 
+                if (iTracker[0] >= length) {
+                    finish(player);
+                    this.cancel();
+                    return;
+                }
+
+                iTracker[1]++;
+                if (iTracker[1] >= winnings.size() - 1) {
+                    iTracker[1] = 0;
+                }
+
+                iTracker[0]++;
+            }
+        }.runTaskTimerAsynchronously(getPlugin(), 0L, 2L);
+    }
+
+    @Override
+    public boolean doesSupport(Crate crate) {
+        return crate instanceof KeyCrate;
+    }
+
+    @Override
+    protected void finish(Player player) {
+        super.finish(player);
+        guis.remove(player.getUniqueId());
+    }
 }
