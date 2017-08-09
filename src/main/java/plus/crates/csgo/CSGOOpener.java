@@ -87,11 +87,11 @@ public class CSGOOpener extends Opener {
 					if (i >= 10 && i <= 16) {
 
 						if (i == 16) {
-							Winning winning1 = getWinning(crate);
+							winning = crate.getRandomWinning();
 							if (last5Winnings.size() == 3)
 								last5Winnings.remove(0);
-							last5Winnings.add(winning1);
-							winGUI.setItem(i, winning1.getPreviewItemStack());
+							last5Winnings.add(winning);
+							winGUI.setItem(i, winning.getPreviewItemStack());
 						} else if (winGUI.getItem(i + 1) != null) {
 							winGUI.setItem(i, winGUI.getItem(i + 1));
 						}
@@ -100,7 +100,7 @@ public class CSGOOpener extends Opener {
 
 							if (timer[0] >= maxTimeTicks) {
 								winning = last5Winnings.get(0);
-								winning.runWin(player);
+								crate.handleWin(player, winning);
 							}
 
 						}
